@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<title>Untitled</title>
+<!--Adobe Edge Runtime-->
+    <script type="text/javascript" charset="utf-8" src="dckea-visualizer_edgePreload.js"></script>
+    <style>
+        .edgeLoad-EDGE-1453162 { visibility:hidden; }
+    </style>
+<!--Adobe Edge Runtime End-->
+<script>
+
+
+	
+	function waitForAnimationToComplete(object, nextFunction) {
+		if (object.isPlaying()) {
+			setTimeout(function(){waitForAnimationToComplete(object, nextFunction)}, 1000);
+		} else {
+			nextFunction();
+		}
+	}
+	
+	AdobeEdge.bootstrapCallback(function (compId) {
+		//Init Variables
+		DCAPE = jQuery.Edge.getComposition("EDGE-1453162").getSymbols("DCAPE")[0];
+		DCAPE_arms = DCAPE.getSymbol('DCAPE_body').getSymbol('DCAPE_arms');
+		
+		actionsToPerform = [];
+		pollForItems(1500);
+	});
+	
+	function pollForItems(interval) {
+		//Populate Items
+		//Check For Items in DCAPI
+		$.getJSON("http://10.10.131.227:8080/dcapi/dcape/ikea/pop",
+		  {
+		  },
+		  function(newRequest) {
+			actionsToPerform.unshift(newRequest);
+		});
+			
+		//Send Robots
+		if (actionsToPerform.length > 0) {
+			var newAction = actionsToPerform[0];
+			actionsToPerform.shift();
+			performAction(newAction);
+			setTimeout(function(){pollForItems(interval)}, 5000);
+		} else {
+			setTimeout(function(){pollForItems(interval)}, interval);
+		}
+	}
+	
+	function resizeImage(img) {
+        var maxWidth = 300;
+        var ratio = 0;
+        if(img.width() > maxWidth){
+            ratio = img.height() / img.width();
+            img.attr('width', maxWidth);
+            img.attr('height', (maxWidth*ratio));   
+        }
+    }
+	
+	function setItemDiv1(itemName, imgUrl) {
+		var h1 = $('<h1>'+itemName+'</h1>');
+		var img = $('<img id="dynamic">');
+		img.attr('src', imgUrl);
+		h1.appendTo('#imgDiv1');
+		img.appendTo('#imgDiv1');
+		resizeImage(img);
+	}
+	function clearItemDiv1() {
+		$('#imgDiv1').empty();
+	}
+	
+	
+	function performAction(newAction) {
+		var itemId = newAction["target-id"];
+		var action = newAction["operation"];
+		var cartId = newAction["cart-id"];
+		var targetId = newAction["target-id"];
+		if (action == 'addtocart') {
+			getItemDetailsFromDcapi(itemId, cartId);
+		} else if (action == 'checkout') {
+			checkOut(targetId);
+		} else {
+			//DO NOTHING, GARBAGE DATA
+		}
+	}
+	
+	function sendRobotToGetItem(item) {
+		var itemImage = item[":item"][0][":definition"][0][":assets"][0][":element"][0]["content-location"];
+		var itemName = item[":item"][0][":definition"][0]["display-name"];
+		if (itemName == "Bilsta Round Dining Table") {
+			setItemDiv1(itemName, itemImage);
+			grab('BilstaTable');
+			waitForAnimationToComplete(DCAPE, clearItemDiv1);
+		} else if (itemName = "Hemnes Coffee Table") {
+			setItemDiv1(itemName, itemImage);
+			grab('HemnesTable');
+			waitForAnimationToComplete(DCAPE, clearItemDiv1);
+		} else if (itemName = "Erland Chair") {
+			setItemDiv1(itemName, itemImage);
+			grab('ErrlandChair');
+			waitForAnimationToComplete(DCAPE, clearItemDiv1);
+		} else if (itemName = "Glen Bar Stool") {
+			setItemDiv1(itemName, itemImage);
+			grab('GlenStool');
+			waitForAnimationToComplete(DCAPE, clearItemDiv1);
+		} else if (itemName = "Stockholm Leather Couch") {
+			setItemDiv1(itemName, itemImage);
+			grab("StockholmLeatherCouch");
+			waitForAnimationToComplete(DCAPE, clearItemDiv1);
+		} else {
+			grab('BilstaTable');
+			waitForAnimationToComplete(DCAPE, clearItemDiv1);
+		}
+	}
+	
+	function getItemDetailsFromDcapi(itemId, cartId) {
+		//Populate Items
+		//Check For Items in DCAPI
+		$.getJSON("http://10.10.131.227:8080/dcapi/carts/ikea/" + cartId + '/lineitems/' + itemId + "?zoom=item:definition,item:definition:assets:element",
+		  {
+		  },
+		  function(data) {
+			sendRobotToGetItem(data);
+		  });
+	}
+
+	function grab(itemName) {
+		DCAPE.play('grab' + itemName, null);
+		DCAPE_arms.play('grab' + itemName, null);
+	}
+	
+	function checkOut(targetId) {
+		if (targetId == 'delivery') {
+			DCAPE.play('checkOutDelivery', null);
+			DCAPE_arms.play('checkOutDelivery', null);
+		} else {
+			DCAPE.play('checkOutAisle1', null);
+			DCAPE_arms.play('checkOutAisle1', null);
+		}
+		
+	}
+
+
+</script>
+</head>
+<body style="margin:0;padding:0;">
+	<div id="Stage" style="float: left" class="EDGE-1453162">
+	</div>
+	<div style="float: left; margin-left:15px"><h2>Robot is Currently Grabbing:</h2>
+		<div style="height: 305px" id="imgDiv1"></div>
+	</div>
+</body>
+</html>
